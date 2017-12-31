@@ -1,12 +1,14 @@
 extern crate glob;
+extern crate regex;
 use std::env;
 use std::fs;
 use std::path::Path;
 use std::io::prelude::*;
+use regex::Regex;
 
 #[derive(Debug)]
 struct Config {
-    pattern: String,
+    search: Regex,
     path: String
 }
 
@@ -15,11 +17,11 @@ struct Config {
 fn parse_config() -> Config {
     let args: Vec<String> = env::args().collect();
     if args.len() < 3 {
-        panic!("Usage: cgrep pattern glob_path");
+        panic!("Usage: cgrep search glob_path");
     };
 
     Config {
-        pattern: args[1].clone(),
+        search: Regex::new(&args[1]).unwrap(),
         path: args[2].clone()
     }
 }
@@ -32,11 +34,13 @@ fn read(path: &Path) -> String {
     s
 }
 
-//search for regex-pattern line-by-line 
-fn search_lines(pattern: &String, from_body: &String) -> Vec<String> {
-    let mut x: Vec<&str> = from_body.split("\n").collect();
-    x.retain(|&line| line.matches(pattern).count() !=  0);
-    x.iter().map(|&line| line.to_string()).collect()
+//search for regex-search line-by-line 
+fn search_lines(search: &Regex, from_body: &String) -> Vec<String> {
+    let x: Vec<&str> = from_body.split("\n").collect();
+    x.iter()
+        .filter(|&line| search.is_match(line))
+        .map(|&line| line.to_string())
+        .collect()
 }
 
 
@@ -48,8 +52,8 @@ fn main() {
     // glob input path
     for path in glob::glob(&config.path).unwrap().filter_map(Result::ok) {
         let file_contents = read(&path);
-        // search matched file for pattern
-        let match_lines = search_lines(&config.pattern, &file_contents);
+        // search matched file for search
+        let match_lines = search_lines(&config.search, &file_contents);
         // print matched lines 
         for line in match_lines{
             println!("{}:{}", &path.display(), line);
@@ -60,11 +64,20 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    use super::{Regex, search_lines};
     #[test]
     fn test_search_lines() {
-        let matches = super::search_lines(&String::from("z"),
+        let matches = search_lines(&Regex::new("z").unwrap(),
                                           &String::from("xxxx\nyyy\n zz"));
         assert_eq!(vec![" zz".to_string()],
+                   matches);
+    }
+
+    #[test]
+    fn test_search_lines_re() {
+        let matches = search_lines(&Regex::new(r"\w{2} $").unwrap(),
+                                          &String::from("xxxx\nyyy\n zz "));
+        assert_eq!(vec![" zz ".to_string()],
                    matches);
     }
 }

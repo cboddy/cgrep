@@ -5,12 +5,19 @@ A toy implementation of grep as part of reading the [The Rust Programming Langua
 
 # Usage
 ```
-cgrep pattern glob_path
+cgrep pattern_re glob_path
 ```
 
 # Example
 ```
- cargo run How "p*.txt"
+cargo run "^H"  "p*.txt"
+```
+or 
+```
+cargo run How "p*.txt"
+```
+will produce output formatted thusly
+```
 config Config { pattern: "How", path: "p*.txt" }
 poem.txt:How dreary to be somebody!
 poem.txt:How public, like a frog
